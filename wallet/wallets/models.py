@@ -34,12 +34,8 @@ class Wallet(models.Model):
         return balance
 
     def clean(self):
-        if (
-            self.pk
-            and Wallet.objects.filter(user=self.user)
-            .exclude(pk=self.pk)
-            .exists()
-        ):
+        existing_wallet = Wallet.objects.filter(user=self.user).first()
+        if existing_wallet and existing_wallet.pk != self.pk:
             raise ValidationError("Each user can only have one wallet.")
 
     def __str__(self):
