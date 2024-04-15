@@ -114,3 +114,16 @@ dmypy.json
 # Pyre type checker
 .pyre/
 wallets/logs
+
+Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+media/
+logs/
+
+# Environments
+.env
+.venv
+env/
+venv/
