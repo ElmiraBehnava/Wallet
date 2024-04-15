@@ -1,0 +1,165 @@
+swagger: '2.0'
+info:
+  title: Wallet API
+  description: API documentation for Wallet operations like creating wallets, managing deposits, and withdrawals.
+  version: 1.0.0
+host: localhost:8000
+schemes:
+  - http
+basePath: /wallets/
+produces:
+  - application/json
+paths:
+  /create/:
+    post:
+      summary: Create or retrieve a wallet
+      description: |
+        Creates a new wallet for a user if it does not exist. If a wallet associated with the provided user ID already exists, it returns the existing wallet.
+      parameters:
+        - in: body
+          name: wallet
+          description: Wallet data, including the user ID.
+          required: true
+          schema:
+            type: object
+            required:
+              - user
+            properties:
+              user:
+                type: string
+                description: User ID to associate or retrieve the wallet.
+      responses:
+        200:
+          description: Existing wallet data returned successfully.
+          schema:
+            $ref: '#/definitions/Wallet'
+        201:
+          description: Wallet created successfully.
+          schema:
+            $ref: '#/definitions/Wallet'
+        400:
+          description: Error with provided data
+  /{uuid}/:
+    get:
+      summary: Retrieve a wallet
+      description: Retrieves details of a specific wallet.
+      parameters:
+        - in: path
+          name: uuid
+          type: string
+          required: true
+      responses:
+        200:
+          description: Wallet details
+          schema:
+            $ref: '#/definitions/Wallet'
+        404:
+          description: Wallet not found
+  /{wallet_uuid}/deposit:
+    post:
+      summary: Create a deposit
+      description: Deposits an amount to a wallet.
+      parameters:
+        - in: path
+          name: wallet_uuid
+          type: string
+          required: true
+        - in: body
+          name: amount
+          required: true
+          schema:
+            type: object
+            properties:
+              amount:
+                type: integer
+                minimum: 1
+      responses:
+        200:
+          description: Deposit successful
+        400:
+          description: Invalid request
+        404:
+          description: Wallet not found
+  /{wallet_uuid}/withdrawl:
+    post:
+      summary: Schedule a withdrawal
+      description: Schedules a withdrawal from a wallet.
+      parameters:
+        - in: path
+          name: wallet_uuid
+          type: string
+          required: true
+        - in: body
+          name: withdrawal
+          required: true
+          schema:
+            type: object
+            properties:
+              amount:
+                type: integer
+                minimum: 1
+              scheduled_for:
+                type: string
+                format: date-time
+      responses:
+        200:
+          description: Withdrawal scheduled
+        400:
+          description: Invalid request
+  /withdrawl/cancel:
+    post:
+      summary: Cancel a withdrawal
+      description: Cancels a scheduled withdrawal.
+      parameters:
+        - in: body
+          name: transaction_uuid
+          required: true
+          schema:
+            type: object
+            properties:
+              transaction_uuid:
+                type: string
+      responses:
+        200:
+          description: Withdrawal cancelled
+        400:
+          description: Invalid request
+definitions:
+  Wallet:
+    type: object
+    properties:
+      uuid:
+        type: string
+        format: uuid
+      user:
+        type: string
+        description: The user ID associated with the wallet.
+      balance:
+        type: integer
+      created_at:
+        type: string
+        format: date-time
+  Transaction:
+    type: object
+    properties:
+      uuid:
+        type: string
+        format: uuid
+      type:
+        type: string
+      amount:
+        type: integer
+      status:
+        type: string
+      scheduled_for:
+        type: string
+        format: date-time
+  TransactionTask:
+    type: object
+    properties:
+      transaction:
+        $ref: '#/definitions/Transaction'
+      task_id:
+        type: string
+      status:
+        type: string

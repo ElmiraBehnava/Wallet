@@ -1,0 +1,63 @@
+
+
+version: '3'
+services:
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8001
+    volumes:
+      - .:/code
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - postgres
+
+  postgres:
+    image: "postgres:alpine"
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: "redis:alpine"
+    environment:
+      TZ: ${TZ}
+
+  celery_worker:
+    build: .
+    command: celery -A wallet worker --loglevel=DEBUG
+    volumes:
+      - .:/code
+    env_file:
+      - .env
+    depends_on:
+      - web
+      - redis
+    
+  flower:
+    image: mher/flower
+    command: celery --broker=redis://${REDIS_HOST}:${REDIS_PORT}/${REDIS_DB} flower --port=5555
+    ports:
+      - "5555:5555"
+    env_file:
+      - .env
+    depends_on:
+      - redis
+
+  third_party_service:
+    build: .
+    ports:
+      - "8010:8010"
+    volumes:
+      - .:/code
+    depends_on:
+      - web
+      - redis
+

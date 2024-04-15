@@ -1,0 +1,1 @@
+from wallets.tasks.process_withdrawal import process_withdrawal
