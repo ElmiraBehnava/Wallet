@@ -22,12 +22,15 @@ class CreateWalletView(CreateAPIView):
         user_id = request.data.get("user", None)
 
         if user_id is not None:
-            try:
-                existing_wallet = Wallet.objects.get(user_id=user_id)
-                serializer = self.get_serializer(existing_wallet)
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            except Wallet.DoesNotExist:
-                pass
+            existing_wallet = Wallet.objects.filter(user_id=user_id).first()
+            if existing_wallet:
+                return Response(
+                    {
+                        "message": "User already has a wallet",
+                        "details": {"wallet_id": existing_wallet.uuid},
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
 
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
