@@ -1,9 +1,9 @@
 from celery import shared_task
 from django.shortcuts import get_object_or_404
-
-from wallet.celery import app
 from wallets.models import Transaction, TransactionTask
 from wallets.utils import request_third_party_transaction
+
+from wallet.celery import app
 
 __all__ = ("app",)
 

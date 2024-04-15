@@ -1,6 +1,5 @@
 from django.utils import timezone
 from rest_framework import serializers
-
 from wallets.models import Transaction, Wallet
 
 
@@ -52,7 +51,7 @@ class WalletSerializer(serializers.ModelSerializer):
         )
 
     def get_user_name(self, obj):
-        return obj.user.username if obj.user else None  #
+        return obj.user.username if obj.user else None
 
     def get_deposit_transactions(self, obj):
         deposit_transactions = obj.transactions.filter(
