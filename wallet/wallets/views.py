@@ -60,9 +60,6 @@ class CreateDepositView(CreateAPIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-    def perform_create(self, serializer):
-        return serializer.save()
-
 
 class ScheduleWithdrawView(APIView):
     def post(self, request, *args, **kwargs):
