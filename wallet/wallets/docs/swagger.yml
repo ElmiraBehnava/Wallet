@@ -3,7 +3,7 @@ info:
   title: Wallet API
   description: API documentation for Wallet operations like creating wallets, managing deposits, and withdrawals.
   version: 1.0.0
-host: localhost:8000
+host: localhost:8001
 schemes:
   - http
 basePath: /wallets/
@@ -12,7 +12,7 @@ produces:
 paths:
   /create/:
     post:
-      summary: Create or retrieve a wallet
+      summary: Create
       description: |
         Creates a new wallet for a user if it does not exist. If a wallet associated with the provided user ID already exists, it returns the existing wallet.
       parameters:
@@ -26,7 +26,7 @@ paths:
               - user
             properties:
               user:
-                type: string
+                type: int
                 description: User ID to associate or retrieve the wallet.
       responses:
         200:

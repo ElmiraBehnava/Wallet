@@ -1,39 +1,30 @@
 from typing import Any
 
-import requests
 from celery import current_app
 from celery.exceptions import WorkerLostError
 from django.db import transaction
 from django.shortcuts import get_object_or_404
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.generics import CreateAPIView, RetrieveAPIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
 from wallets.models import Transaction, TransactionTask, Wallet
-from wallets.serializers import WalletSerializer, WithdrawalSerializer
-from wallets.services import deposit, schedule_withdrawal
+from wallets.serializers import (
+    DepositTransactionSerializer,
+    WalletSerializer,
+    WithdrawalSerializer,
+)
+from wallets.services import schedule_withdrawal
 
 
 class CreateWalletView(CreateAPIView):
     serializer_class = WalletSerializer
 
-    def post(self, request: Request, *args, **kwargs):
-        user_id = request.data.get("user", None)
-
-        if user_id is not None:
-            existing_wallet = Wallet.objects.filter(user_id=user_id).first()
-            if existing_wallet:
-                return Response(
-                    {
-                        "message": "User already has a wallet",
-                        "details": {"wallet_id": existing_wallet.uuid},
-                    },
-                    status=status.HTTP_409_CONFLICT,
-                )
-
+    def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -45,37 +36,32 @@ class RetrieveWalletView(RetrieveAPIView):
     lookup_field = "uuid"
 
 
-class CreateDepositView(APIView):
-    def post(self, request, *args, **kwargs):
-        wallet_uuid = kwargs.get("wallet_uuid")
-        amount = int(request.data.get("amount", 0))
-        if amount <= 0:
+class CreateDepositView(CreateAPIView):
+    serializer_class = DepositTransactionSerializer
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["wallet_uuid"] = self.kwargs.get("wallet_uuid")
+        return context
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        try:
+            serializer.is_valid(raise_exception=True)
+            result = serializer.save()
+            return Response(result, status=status.HTTP_201_CREATED)
+        except serializers.ValidationError as e:
             return Response(
-                {"message": "Deposit amount must be greater than zero"},
-                status=status.HTTP_400_BAD_REQUEST,
+                {"errors": e.detail}, status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {"errors": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        try:
-            Wallet.objects.get(uuid=wallet_uuid)
-        except Wallet.DoesNotExist:
-            return Response(
-                {"message": "Wallet not found"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        try:
-            result = deposit(wallet_uuid, amount)
-            return Response(
-                {
-                    "message": result["message"],
-                    "current_amount": result["current_amount"],
-                },
-                status=result["status"],
-            )
-        except requests.exceptions.RequestException as e:
-            return Response(
-                {"message": str(e)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
-            )
+    def perform_create(self, serializer):
+        return serializer.save()
 
 
 class ScheduleWithdrawView(APIView):
