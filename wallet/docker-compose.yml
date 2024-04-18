@@ -1,5 +1,3 @@
-
-
 version: '3'
 services:
   web:
@@ -40,15 +38,16 @@ services:
     depends_on:
       - web
       - redis
-    
+
   flower:
     image: mher/flower
-    command: celery --broker=redis://${REDIS_HOST}:${REDIS_PORT}/${REDIS_DB} flower --port=5555
+    command: celery --broker=redis://redis:6379/0 flower --port=5555
     ports:
       - "5555:5555"
     env_file:
       - .env
     depends_on:
+      - celery_worker
       - redis
 
   third_party_service:
@@ -60,4 +59,3 @@ services:
     depends_on:
       - web
       - redis
-

@@ -83,41 +83,38 @@ class WithdrawalSerializer(serializers.Serializer):
     scheduled_for = serializers.DateTimeField()
 
     def validate_scheduled_for(self, value):
-        if value <= timezone.now():
+        if value < timezone.now():
             raise serializers.ValidationError(
-                "The scheduled time must be in the future."
+                {"scheduled_for": "The scheduled time must be in the future."}
             )
         return value
 
+    def validate(self, data):
+        user = data.get("user")
+        if user and Wallet.objects.filter(user=user).exists():
+            raise serializers.ValidationError(
+                {"user": "User already has a wallet."}
+            )
+        return data
+
 
 class DepositTransactionSerializer(serializers.Serializer):
-    amount = serializers.IntegerField()
+    amount = serializers.IntegerField(min_value=1)
 
     def validate(self, data):
         wallet_uuid = self.context.get("wallet_uuid")
         if not wallet_uuid:
-            raise serializers.ValidationError(
-                {"wallet_uuid": "This field must be provided."}
-            )
+            raise serializers.ValidationError("Wallet UUID must be provided.")
         try:
             wallet = Wallet.objects.get(uuid=wallet_uuid)
         except Wallet.DoesNotExist:
-            raise serializers.ValidationError(
-                {"wallet_uuid": "Wallet not found."}
-            )
+            raise serializers.ValidationError("Wallet not found")
         data["wallet"] = wallet
         return data
 
-    def validate_amount(self, value):
-        if value <= 0:
-            raise serializers.ValidationError(
-                {"amount": "Deposit amount must be greater than zero"}
-            )
-        return value
-
     def create(self, validated_data):
         wallet = validated_data.get("wallet")
-        amount = validated_data.get("amount")
+        amount = validated_data["amount"]
         try:
             result = deposit(wallet.uuid, amount)
             if result["status"] == 200:
@@ -129,6 +126,4 @@ class DepositTransactionSerializer(serializers.Serializer):
                 )
             return result
         except requests.exceptions.RequestException as e:
-            raise serializers.ValidationError(
-                {"network": f"Network error occurred: {str(e)}"}
-            )
+            raise serializers.ValidationError(str(e))

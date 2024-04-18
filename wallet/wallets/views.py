@@ -72,6 +72,10 @@ class ScheduleWithdrawView(APIView):
                 return Response(
                     {"message": "Withdrawal scheduled successfully"}
                 )
+            except serializers.ValidationError as e:
+                return Response(
+                    {"error": e.detail}, status=status.HTTP_400_BAD_REQUEST
+                )
             except ValueError as e:
                 return Response(
                     {"error": str(e)}, status=status.HTTP_400_BAD_REQUEST
